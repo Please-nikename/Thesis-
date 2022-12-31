@@ -1,0 +1,133 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.utils.data as data
+import torchvision.datasets as datasets
+import torchvision.transforms as transforms
+
+# Set device
+device = torch.device("cpu")
+
+# Set hyperparameters
+num_epochs = 5
+batch_size = 64
+learning_rate = 0.001
+
+# Load MNIST dataset
+train_dataset = datasets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
+test_dataset = datasets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
+
+# Create data loaders
+train_loader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+# Define model
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(28 * 28, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = x.view(-1, 28 * 28)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+model = Net().to(device)
+
+# Define loss function and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+# Initialize running loss and accuracy
+running_loss = 0.0
+running_acc = 0.0
+
+# Train the model
+for epoch in range(num_epochs):
+    for i, (images, labels) in enumerate(train_loader):
+        images = images.to(device)
+        labels = labels.to(device)
+
+        # Forward pass
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+
+        # Backward and optimize
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Get predicted labels
+        _, predicted = torch.max(outputs.data, 1)
+
+        # Update running loss and accuracy
+        running_loss += loss.item()
+        running_acc += (predicted == labels).sum().item()
+
+        if (i+1) % 100 == 0:
+            print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
+                   .format(epoch+1, num_epochs, i+1, len(train_dataset)//batch_size, loss.item()))
+
+# Calculate average loss and accuracy
+avg_loss = running_loss / len(train_loader)
+avg_acc = running_acc / len(train_dataset)
+print(f'Average loss: {avg_loss:.4f},Average accuracu: {avg_acc:.4f}')
+
+# Test the model
+model.eval()
+with torch.no_grad():
+    correct = 0
+    total = 0
+    test_loss = 0.0
+    test_acc = 0.0
+    for images, labels in test_loader:
+        images = images.to(device)
+        labels = labels.to(device)
+        outputs = model(images)
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+        # Update test loss and accuracy
+        test_loss += loss.item()
+        test_acc += (predicted == labels).sum().item()
+
+        # Calculate average test loss and accuracy
+    avg_test_loss = test_loss / len(test_loader)
+    avg_test_acc = test_acc / len(test_dataset)
+
+    print(f'Average test loss: {avg_test_loss:.4f}, Average test accuracy: {avg_test_acc:.4f}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
